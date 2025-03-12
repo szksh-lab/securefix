@@ -1,0 +1,85 @@
+name: Fix Code securely
+description: Fix Code securely
+author: Shunsuke Suzuki
+branding:
+  icon: git-commit
+  color: blue
+inputs:
+  app_id:
+    description: |
+      GitHub App ID
+    required: true
+  app_private_key:
+    description: |
+      GitHub App Private Key
+    required: true
+  repository:
+    description: |
+      Repository full name.
+    required: true
+  branch:
+    description: |
+      Branch name.
+    required: true
+  files:
+    description: |
+      Fixed file paths.
+    required: true
+  pr_number:
+    description: |
+      Pull Request number.
+    required: false
+  commit_message:
+    description: |
+      Commit message
+    required: true
+    default: Securefix
+  pull_request_comment:
+    description: |
+      Pull Request comment
+    required: true
+    default: |
+      :x: Securefix failed.
+runs:
+  using: composite
+  steps:
+    # Create and push a commit
+    - if: ${{ steps.files.outputs.value != '' }}
+      uses: suzuki-shunsuke/commit-action@9faad521ea6a1e768439ffbe6b25b6cb3fc1b181 # v0.0.6
+      with:
+        app_id: ${{inputs.app_id}}
+        app_private_key: ${{inputs.app_private_key}}
+        repository: ${{ inputs.repository }}
+        branch: ${{ inputs.branch }}
+        files: ${{ inputs.files }}
+        commit_message: |
+          ${{inputs.commit_message}}
+          ${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}
+
+    # Create a GitHub App token to report an error to a pull request
+    - if: failure() && steps.metadata.outputs.pr_number != 'null'
+      uses: tibdex/github-app-token@3beb63f4bd073e61482598c45c71c1019b59b73a # v2.1.0
+      id: pr_token
+      with:
+        app_id: ${{inputs.app_id}}
+        private_key: ${{inputs.app_private_key}}
+        repositories: >-
+          ["${{ steps.info.outputs.repo }}"]
+        permissions: >-
+          {
+            "pull_requests": "write"
+          }
+
+    # Create a pull request comment to report an error
+    - if: failure() && steps.metadata.outputs.pr_number != ''
+      shell: bash
+      env:
+        GH_TOKEN: ${{ steps.pr_token.outputs.token }}
+        REPO: ${{ inputs.repository }}
+        PR_NUMBER: ${{ inputs.pr_number }}
+      run: |
+        gh pr comment \
+          -R "$REPO" \
+          -b "${{inputs.pull_request_comment}}" \
+          [Workflow]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID)" \
+          "$PR_NUMBER"
