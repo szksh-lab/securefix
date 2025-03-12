@@ -72,7 +72,7 @@ runs:
       run: echo "$EVENT" > "${ARTIFACT_NAME}.json"
       env:
         ARTIFACT_NAME: ${{ steps.artifact-name.outputs.value }}
-        EVENT: ${{toJson(github.event)}}
+        EVENT: ${{steps.metadata.outputs.result}}
 
     # Create a file where fixed file paths are listed
     - if: steps.files.outputs.value != ''
