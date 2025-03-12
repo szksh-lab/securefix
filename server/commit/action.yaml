@@ -1,5 +1,5 @@
-name: Fix Code
-description: Fix Code
+name: Create a commit
+description: Create a commit
 author: Shunsuke Suzuki
 branding:
   icon: git-commit
