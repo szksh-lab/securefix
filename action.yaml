@@ -108,6 +108,10 @@ runs:
           -R "${GITHUB_REPOSITORY_OWNER}/${REPO}" \
           "$ARTIFACT_NAME" \
           --description "$GITHUB_REPOSITORY/${GITHUB_RUN_ID}"
+    # Sleep for a while
+    - if: steps.files.outputs.value != ''
+      shell: bash
+      run: sleep 1
     # Delete a label
     - if: steps.files.outputs.value != ''
       shell: bash
