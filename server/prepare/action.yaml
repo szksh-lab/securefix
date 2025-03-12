@@ -126,7 +126,7 @@ runs:
         rm "$METADATA_FILE"
 
     # Create a GitHub App token to read a pull request
-    - if: failure() && fromJson(steps.metadata.outputs.value).pull_request.number != 'null'
+    - if: fromJson(steps.metadata.outputs.value).pull_request
       uses: tibdex/github-app-token@3beb63f4bd073e61482598c45c71c1019b59b73a # v2.1.0
       id: pr_read_token
       with:
@@ -140,10 +140,11 @@ runs:
           }
 
     # Get a pull request
-    - id: pr
+    - if: fromJson(steps.metadata.outputs.value).context.payload.pull_request
+      id: pr
       shell: bash
       env:
-        NUMBER: ${{ fromJson(steps.metadata.outputs.value).pull_request.number }}
+        NUMBER: ${{ fromJson(steps.metadata.outputs.value).context.payload.pull_request.number }}
         GH_TOKEN: ${{ steps.pr_read_token.outputs.token }}
         REPO: ${{ steps.info.outputs.repo_full_name }}
       run: |
