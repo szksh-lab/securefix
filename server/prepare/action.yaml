@@ -86,10 +86,10 @@ runs:
         RUN_ID: ${{ steps.info.outputs.run_id }}
         WORKFLOW: ${{ inputs.workflow_name }}
       run: |
-        data=$(gh run view \
-          -R "$REPO" \
-          --json event,workflowName,headBranch,headSha \
-          "$RUN_ID")
+        data=$(gh api \
+          -H "Accept: application/vnd.github+json" \
+          -H "X-GitHub-Api-Version: 2022-11-28" \
+          "/repos/$REPO/actions/runs/$RUN_ID")
         {
           echo 'value<<EOF'
           echo "$data"
@@ -97,7 +97,7 @@ runs:
         } >> "$GITHUB_OUTPUT"
 
     # Validate workflow name
-    - if: inputs.workflow_name != '' && fromJson(steps.workflow_run.outputs.value).workflowName != inputs.workflow_name
+    - if: inputs.workflow_name != '' && fromJson(steps.workflow_run.outputs.value).name != inputs.workflow_name
       shell: bash
       env:
         WORKFLOW: ${{ inputs.workflow_name }}
@@ -147,10 +147,10 @@ runs:
         GH_TOKEN: ${{ steps.pr_read_token.outputs.token }}
         REPO: ${{ steps.info.outputs.repo_full_name }}
       run: |
-        data=$(gh pr view \
-          -R "$REPO" \
-          --json author,baseRefName,body,closed,headRefName,headRefOid,labels,title \
-          "$NUMBER")
+        data=$(gh api \
+          -H "Accept: application/vnd.github+json" \
+          -H "X-GitHub-Api-Version: 2022-11-28" \
+          "/repos/$REPO/pulls/$NUMBER")
         {
           echo 'value<<EOF'
           echo "$data"
@@ -159,7 +159,7 @@ runs:
 
     # Validate if the workflow commit sha is latest
     - shell: bash
-      if: fromJson(steps.workflow_run.outputs.value).headSha != fromJson(steps.pr.outputs.value).headRefOid
+      if: fromJson(steps.workflow_run.outputs.value).head_sha != fromJson(steps.pr.outputs.value).head.sha
       run: |
         echo "::error:: The workflow commit sha is not the latest"
         exit 1

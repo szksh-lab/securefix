@@ -13,22 +13,10 @@ inputs:
     description: |
       GitHub App Private Key
     required: true
-  repository:
+  outputs:
     description: |
-      Repository full name.
+      Prepare action's outputs
     required: true
-  branch:
-    description: |
-      Branch name.
-    required: true
-  files:
-    description: |
-      Fixed file paths.
-    required: true
-  pr_number:
-    description: |
-      Pull Request number.
-    required: false
   commit_message:
     description: |
       Commit message
@@ -49,37 +37,38 @@ runs:
       with:
         app_id: ${{inputs.app_id}}
         app_private_key: ${{inputs.app_private_key}}
-        repository: ${{ inputs.repository }}
-        branch: ${{ inputs.branch }}
+        repository: ${{ fromJson(inputs.outputs).repository_full_name }}
+        branch: ${{ fromJson(inputs.outputs).workflow_run.head_branch }}
         files: ${{ inputs.files }}
         commit_message: |
           ${{inputs.commit_message}}
           ${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}
 
     # Create a GitHub App token to report an error to a pull request
-    - if: failure() && steps.metadata.outputs.pr_number != 'null'
+    - if: failure() && fromJson(inputs.outputs).pr != null
       uses: tibdex/github-app-token@3beb63f4bd073e61482598c45c71c1019b59b73a # v2.1.0
       id: pr_token
       with:
         app_id: ${{inputs.app_id}}
         private_key: ${{inputs.app_private_key}}
         repositories: >-
-          ["${{ steps.info.outputs.repo }}"]
+          ["${{ fromJson(inputs.outputs).repository_name }}"]
         permissions: >-
           {
             "pull_requests": "write"
           }
 
     # Create a pull request comment to report an error
-    - if: failure() && steps.metadata.outputs.pr_number != ''
+    - if: failure() && fromJson(inputs.outputs).pr != null
       shell: bash
       env:
         GH_TOKEN: ${{ steps.pr_token.outputs.token }}
-        REPO: ${{ inputs.repository }}
-        PR_NUMBER: ${{ inputs.pr_number }}
+        REPO: ${{ fromJson(inputs.outputs).repository_full_name }}
+        PR_NUMBER: ${{ fromJson(inputs.outputs).pr.number }}
+        COMMENT: ${{ inputs.pull_request_comment }}
       run: |
         gh pr comment \
           -R "$REPO" \
-          -b "${{inputs.pull_request_comment}}" \
+          -b "${COMMENT}" \
           [Workflow]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID)" \
           "$PR_NUMBER"
