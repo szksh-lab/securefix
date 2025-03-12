@@ -64,7 +64,7 @@ runs:
       env:
         GH_TOKEN: ${{ steps.pr_token.outputs.token }}
         REPO: ${{ fromJson(inputs.outputs).repository_full_name }}
-        PR_NUMBER: ${{ fromJson(fromJson(inputs.outputs).pr).number }}
+        PR_NUMBER: ${{ fromJson(inputs.outputs).pr && fromJson(fromJson(inputs.outputs).pr).number || '' }}
         COMMENT: ${{ inputs.pull_request_comment }}
       run: |
         gh pr comment \
