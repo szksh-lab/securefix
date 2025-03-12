@@ -39,7 +39,7 @@ runs:
         branch: ${{ fromJson(fromJson(inputs.outputs).workflow_run).head_branch }}
         files: ${{ fromJson(inputs.outputs).fixed_files }}
         commit_message: |
-          ${{inputs.commit_message}}
+          ${{fromJson(fromJson(inputs.outputs).metadata).inputs.commit_message && fromJson(fromJson(inputs.outputs).metadata).inputs.commit_message || inputs.commit_message}}
           ${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}
 
     # Create a GitHub App token to report an error to a pull request
