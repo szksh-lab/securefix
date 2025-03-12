@@ -18,6 +18,12 @@ inputs:
       Client Workflow name. If this is empty, the action does not check the workflow name.
     required: true
     default: securefix
+  pull_request_comment:
+    description: |
+      Pull Request comment
+    required: true
+    default: |
+      :x: Securefix failed.
 outputs:
   pr:
     description: |
@@ -47,6 +53,10 @@ outputs:
     description: |
       Fixed file paths
     value: ${{ steps.files.outputs.value }}
+  pull_request_comment:
+    description: |
+      Pull Request comment
+    value: ${{ inputs.pull_request_comment }}
 runs:
   using: composite
   steps:
@@ -76,7 +86,7 @@ runs:
           {
             "actions": "read",
             "contents": "read",
-            "pull_requests": "read"
+            "pull_requests": "write"
           }
 
     # Get GitHub Actions Workflow Run
@@ -104,7 +114,7 @@ runs:
       env:
         WORKFLOW: ${{ inputs.workflow_name }}
       run: |
-        echo "::error:: The workflow name must be $WORKFLOW"
+        echo "::error:: The client workflow name must be $WORKFLOW"
         exit 1
 
     # Download a GitHub Actions Artifact
@@ -169,8 +179,11 @@ runs:
     # Validate if the workflow commit sha is latest
     - shell: bash
       if: fromJson(steps.workflow_run.outputs.value).head_sha != (fromJson(steps.metadata.outputs.value).context.payload.pull_request && fromJson(steps.pr.outputs.value).head.sha || fromJson(steps.branch.outputs.value).commit.sha)
+      env:
+        EXPECTED: ${{ fromJson(steps.workflow_run.outputs.value).head_sha }}
+        ACTUAL: ${{ fromJson(steps.metadata.outputs.value).context.payload.pull_request && fromJson(steps.pr.outputs.value).head.sha || fromJson(steps.branch.outputs.value).commit.sha }}
       run: |
-        echo "::error:: The workflow commit sha is not the latest"
+        echo "::error:: The workflow commit sha ($ACTUAL) is not the latest ($EXPECTED)"
         exit 1
 
     # Read changed file paths
@@ -185,3 +198,18 @@ runs:
           echo EOF
         } >> "$GITHUB_OUTPUT"
         rm "$FILES"
+
+    # Create a pull request comment to report an error
+    - if: failure() && fromJson(steps.metadata.outputs.value).context.payload.pull_request
+      shell: bash
+      env:
+        GH_TOKEN: ${{ steps.token.outputs.token }}
+        REPO: ${{ steps.info.outputs.repo_full_name }}
+        PR_NUMBER: ${{ fromJson(steps.metadata.outputs.value).context.payload.pull_request && fromJson(steps.metadata.outputs.value).context.payload.pull_request.number || '' }}
+        COMMENT: ${{ inputs.pull_request_comment }}
+      run: |
+        gh pr comment \
+          -R "$REPO" \
+          -b "${COMMENT}" \
+          [Workflow]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID)" \
+          "$PR_NUMBER"
