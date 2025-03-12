@@ -126,7 +126,7 @@ runs:
         rm "$METADATA_FILE"
 
     # Create a GitHub App token to read a pull request
-    - if: fromJson(steps.metadata.outputs.value).pull_request
+    - if: fromJson(steps.metadata.outputs.value).context.payload.pull_request
       uses: tibdex/github-app-token@3beb63f4bd073e61482598c45c71c1019b59b73a # v2.1.0
       id: pr_read_token
       with:
