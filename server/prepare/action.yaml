@@ -89,6 +89,14 @@ runs:
             "pull_requests": "write"
           }
 
+    # Download a GitHub Actions Artifact
+    - uses: actions/download-artifact@cc203385981b70ca67e1cc392babf9cc229d5806 # v4.1.9
+      with:
+        github-token: ${{ steps.token.outputs.token }}
+        name: ${{ github.event.label.name }}
+        repository: ${{ steps.info.outputs.repo_full_name }}
+        run-id: ${{ steps.info.outputs.run_id }}
+
     # Read a metadata file
     - id: metadata
       shell: bash
@@ -148,14 +156,6 @@ runs:
       run: |
         echo "::error:: The client workflow name must be $WORKFLOW"
         exit 1
-
-    # Download a GitHub Actions Artifact
-    - uses: actions/download-artifact@cc203385981b70ca67e1cc392babf9cc229d5806 # v4.1.9
-      with:
-        github-token: ${{ steps.token.outputs.token }}
-        name: ${{ github.event.label.name }}
-        repository: ${{ steps.info.outputs.repo_full_name }}
-        run-id: ${{ steps.info.outputs.run_id }}
 
     # Get a branch
     - if: |
